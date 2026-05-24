@@ -31,7 +31,7 @@ jobs:
       - name: Check for upstream updates
         id: check
         run: |
-          LOCAL=$(git rev-parse main)
+          LOCAL=$(git rev-parse master)
           UPSTREAM=$(git rev-parse upstream/master)
 
           if [ "$LOCAL" = "$UPSTREAM" ]; then
