@@ -12,7 +12,6 @@ on:
         required: true
         default: 'master'
 
-
 permissions:
   contents: write
 
