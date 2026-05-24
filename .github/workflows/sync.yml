@@ -25,7 +25,7 @@ jobs:
 
       - name: Add upstream remote
         run: |
-          git remote add upstream https://github.com/legalishomo/gfwlist.git || true
+          git remote add upstream https://github.com/gfwlist/gfwlist.git || true
           git fetch upstream
 
       - name: Check for upstream updates
