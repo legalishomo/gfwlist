@@ -32,7 +32,7 @@ jobs:
         id: check
         run: |
           LOCAL=$(git rev-parse main)
-          UPSTREAM=$(git rev-parse upstream/main)
+          UPSTREAM=$(git rev-parse upstream/master)
 
           if [ "$LOCAL" = "$UPSTREAM" ]; then
             echo "skip=true" >> $GITHUB_OUTPUT
