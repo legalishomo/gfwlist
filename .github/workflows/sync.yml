@@ -1,1 +1,90 @@
-1
+name: Manual Sync Fork (Auto-resolve Conflicts, Exclude Workflows)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@v6.0.2
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set Git identity
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream https://github.com/legalishomo/gfwlist.git || true
+          git fetch upstream
+
+      - name: Check for upstream updates
+        id: check
+        run: |
+          LOCAL=$(git rev-parse main)
+          UPSTREAM=$(git rev-parse upstream/main)
+
+          if [ "$LOCAL" = "$UPSTREAM" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Sync upstream excluding workflows
+        if: steps.check.outputs.skip == 'false'
+        run: |
+          set -e
+
+          # 1. Backup local workflows (file-level only)
+          mkdir -p /tmp/local-workflows
+
+          if [ -d .github/workflows ]; then
+             cp -r .github/workflows/. /tmp/local-workflows/
+          fi
+
+          # 2. Remove workflows before merge (prevents conflict)
+          rm -rf .github/workflows
+
+          # 3. Merge upstream safely
+          git merge upstream/main -X theirs --no-commit --allow-unrelated-histories || true
+
+          # 4. Extract upstream workflows OUTSIDE .github (IMPORTANT FIX)
+          rm -rf upstream-workflows
+          mkdir -p upstream-workflows
+
+          git ls-tree -r upstream/main --name-only \
+            | grep '^.github/workflows/' \
+            | while read f; do
+                git show "upstream/main:$f" > "upstream-workflows/$(basename "$f")" || true
+              done
+
+          # 5. Restore ONLY local workflows
+          mkdir -p .github/workflows
+
+          if [ -d /tmp/local-workflows ]; then
+            cp /tmp/local-workflows/* .github/workflows/ 2>/dev/null || true
+          fi
+
+          # 6. Commit ONLY non-workflow changes
+          git add -A
+
+          # ensure workflows are not staged
+          git reset .github/workflows || true
+
+          git add -A
+
+          git commit -m "Auto-sync upstream changes (excluding workflows)" || echo "Nothing to commit"
+
+      - name: Push changes
+        if: steps.check.outputs.skip == 'false'
+        run: git push origin main
