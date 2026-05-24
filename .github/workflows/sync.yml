@@ -3,10 +3,15 @@ name: Manual Sync Fork (Auto-resolve Conflicts, Exclude Workflows)
 on:
   workflow_dispatch:
     inputs:
+      upstream_url:
+        description: '上游仓库地址'
+        required: true
+        default: 'https://github.com/gfwlist/gfwlist.git'
       branch:
         description: '要同步的分支'
         required: true
         default: 'master'
+
 
 permissions:
   contents: write
@@ -30,7 +35,7 @@ jobs:
 
       - name: Add upstream remote
         run: |
-          git remote add upstream https://github.com/gfwlist/gfwlist.git || true
+          git remote add upstream ${{ github.event.inputs.upstream_url }} || true
           git fetch upstream
 
       - name: Check for upstream updates
